@@ -1,4 +1,4 @@
-import { Sparkle } from "@phosphor-icons/react";
+import { Sparkle } from "@/components/icons";
 
 /** 里程碑交付前的模块占位页 */
 export function ModulePlaceholder({
