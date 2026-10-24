@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ListChecks, Play, Sparkle, SpinnerGap } from "@phosphor-icons/react";
+import { ListChecks, Play, Sparkle, SpinnerGap, Timer } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,6 +55,30 @@ export function QuizHomeClient({
   const [count, setCount] = useState(5);
   const [difficulty, setDifficulty] = useState(3);
   const [generating, setGenerating] = useState(false);
+  const [mocking, setMocking] = useState(false);
+
+  const mockExam = async () => {
+    if (!courseId) {
+      toast.error("请先选择课程");
+      return;
+    }
+    setMocking(true);
+    try {
+      const res = await fetch("/api/quiz/mock-exam", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ courseId, count: 10, timeLimitMin: 45 }),
+      });
+      const d = (await res.json()) as { quizSetId?: string; created?: number; error?: string };
+      if (!res.ok) throw new Error(d.error ?? "生成失败");
+      toast.success(`模拟卷已生成（${d.created} 题 · 限时 45 分钟）`);
+      router.push(`/quiz/${d.quizSetId}`);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setMocking(false);
+    }
+  };
 
   const scopedDocs = useMemo(() => documents.filter((d) => d.courseId === courseId), [documents, courseId]);
   const scopedKps = useMemo(() => knowledgePoints.filter((k) => k.courseId === courseId), [knowledgePoints, courseId]);
@@ -175,6 +199,10 @@ export function QuizHomeClient({
           <Button size="lg" onClick={generate} disabled={generating}>
             {generating ? <SpinnerGap className="animate-spin" size={15} /> : <Sparkle size={15} />}
             {generating ? "生成中（约 10-30s）" : "AI 出题"}
+          </Button>
+          <Button variant="outline" size="lg" onClick={mockExam} disabled={mocking}>
+            {mocking ? <SpinnerGap className="animate-spin" size={15} /> : <Timer size={15} />}
+            考前冲刺模拟卷
           </Button>
         </div>
       </div>

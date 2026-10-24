@@ -38,6 +38,22 @@ export function WrongBookClient({ initial, courseName }: { initial: WrongRow[]; 
   const [showResolved, setShowResolved] = useState(false);
   const [repracticing, setRepracticing] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [varianting, setVarianting] = useState<string | null>(null);
+
+  const makeVariant = async (id: string) => {
+    setVarianting(id);
+    try {
+      const res = await fetch(`/api/wrong-items/${id}/variant`, { method: "POST" });
+      const d = (await res.json()) as { quizSetId?: string; error?: string };
+      if (!res.ok) throw new Error(d.error ?? "生成变式失败");
+      toast.success("变式题已生成");
+      router.push(`/quiz/${d.quizSetId}`);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setVarianting(null);
+    }
+  };
 
   const visible = items.filter((i) => (showResolved ? true : !i.resolved));
   const pendingCount = items.filter((i) => !i.resolved).length;
@@ -106,9 +122,15 @@ export function WrongBookClient({ initial, courseName }: { initial: WrongRow[]; 
                 {w.resolved && <span className="rounded-full bg-mint-bg px-2.5 py-0.5 text-[11px] font-semibold text-mint-ink">已掌握</span>}
                 <div className="ml-auto flex gap-1.5">
                   {!w.resolved && (
-                    <Button variant="outline" size="xs" onClick={() => void resolve(w.id)}>
-                      <CheckCircle size={12} /> 标记掌握
-                    </Button>
+                    <>
+                      <Button variant="outline" size="xs" onClick={() => void makeVariant(w.id)} disabled={varianting === w.id}>
+                        {varianting === w.id ? <SpinnerGap className="animate-spin" size={12} /> : <Lightning size={12} />}
+                        举一反三
+                      </Button>
+                      <Button variant="outline" size="xs" onClick={() => void resolve(w.id)}>
+                        <CheckCircle size={12} /> 标记掌握
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>

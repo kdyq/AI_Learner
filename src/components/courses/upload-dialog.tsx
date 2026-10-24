@@ -3,7 +3,7 @@
 import { useRef, useState, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FilePlus, SpinnerGap, UploadSimple, X } from "@phosphor-icons/react";
+import { Camera, FilePlus, SpinnerGap, UploadSimple, X } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -37,8 +37,10 @@ export function UploadDialog({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<"file" | "image">("file");
   const [courseId, setCourseId] = useState(defaultCourseId ?? courses[0]?.id ?? "");
   const [files, setFiles] = useState<File[]>([]);
+  const [image, setImage] = useState<{ dataUrl: string; name: string } | null>(null);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -62,14 +64,40 @@ export function UploadDialog({
     addFiles(e.dataTransfer.files);
   };
 
+  const pickImage = (f: File | undefined) => {
+    if (!f) return;
+    if (!f.type.startsWith("image/")) {
+      toast.error("请选择图片文件");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setImage({ dataUrl: String(reader.result), name: f.name });
+    reader.readAsDataURL(f);
+  };
+
   const upload = async () => {
     if (!courseId) {
       toast.error("请先创建课程");
       return;
     }
-    if (files.length === 0) return;
+    if (tab === "file" && files.length === 0) return;
+    if (tab === "image" && !image) return;
     setUploading(true);
     try {
+      if (tab === "image" && image) {
+        const res = await fetch("/api/documents/ocr", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ courseId, dataUrl: image.dataUrl, fileName: image.name }),
+        });
+        const d = (await res.json()) as { documentId?: string; charCount?: number; error?: string };
+        if (!res.ok) throw new Error(d.error ?? "识别失败");
+        toast.success(`识别完成：${d.charCount} 字，已入库可检索`);
+        setOpen(false);
+        setImage(null);
+        router.refresh();
+        return;
+      }
       const fd = new FormData();
       fd.set("courseId", courseId);
       for (const f of files) fd.append("files", f);
@@ -123,6 +151,28 @@ export function UploadDialog({
             </Select>
           </div>
 
+          <div className="flex gap-2">
+            {(
+              [
+                { key: "file", label: "文档文件" },
+                { key: "image", label: "拍照/截图 OCR" },
+              ] as const
+            ).map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTab(t.key)}
+                className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${
+                  tab === t.key ? "bg-ink text-white" : "bg-surface-hover text-ink-2 hover:opacity-80"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {tab === "file" ? (
+          <>
           <div
             role="button"
             tabIndex={0}
@@ -179,14 +229,42 @@ export function UploadDialog({
               ))}
             </ul>
           )}
+          </>
+          ) : (
+            <div className="grid place-items-center gap-3 rounded-[14px] border-2 border-dashed border-line px-6 py-9 text-center">
+              <Camera size={26} className="text-ink-3" />
+              <p className="text-sm font-medium">选择拍照或截图，AI 视觉模型识别文字后入库</p>
+              <input
+                type="file"
+                accept="image/*"
+                className="text-[13px]"
+                onChange={(e) => {
+                  pickImage(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+              {image && (
+                <div className="space-y-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={image.dataUrl} alt="预览" className="mx-auto max-h-40 rounded-xl ring-1 ring-line" />
+                  <button className="text-[12px] text-ink-3 hover:text-danger" onClick={() => setImage(null)}>
+                    移除图片
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setOpen(false)}>
               取消
             </Button>
-            <Button onClick={upload} disabled={uploading || files.length === 0}>
+            <Button
+              onClick={upload}
+              disabled={uploading || (tab === "file" ? files.length === 0 : !image)}
+            >
               {uploading ? <SpinnerGap className="animate-spin" size={14} /> : <UploadSimple size={14} />}
-              上传 {files.length > 0 ? `(${files.length})` : ""}
+              {uploading ? "处理中…" : tab === "image" ? "识别并入库" : `上传 ${files.length > 0 ? `(${files.length})` : ""}`}
             </Button>
           </div>
         </div>

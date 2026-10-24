@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { chatMessages, chatSessions, type Citation } from "@/db/schema";
-import { PERSONA, ragPrompt } from "@/lib/ai/prompts";
+import { PERSONA, ragPrompt, FEYNMAN_PROMPT, SOCRATIC_PROMPT } from "@/lib/ai/prompts";
 import { chatStream, sseStream } from "@/lib/ai/chat";
 import { retrieve } from "@/lib/retrieval/hybrid";
 import { buildNumberedContext } from "@/lib/retrieval/context";
@@ -54,27 +54,35 @@ export async function POST(req: Request, { params }: Ctx) {
   };
   db.insert(chatMessages).values(userMsg).run();
 
-  // 检索（无课程则不带资料上下文）
+  // 检索（仅 RAG 模式；费曼/苏格拉底不需要资料上下文）
   let contextText = "";
   let citations: Citation[] = [];
-  if (session.courseId) {
+  if (session.courseId && session.mode === "rag") {
     const chunks = await retrieve(session.courseId, question, 6);
     const built = buildNumberedContext(chunks);
     contextText = built.text;
     citations = built.citations;
   }
 
+  const systemPrompt =
+    session.mode === "feynman"
+      ? `${PERSONA}\n\n${FEYNMAN_PROMPT}`
+      : session.mode === "socratic"
+        ? `${PERSONA}\n\n${SOCRATIC_PROMPT}`
+        : PERSONA;
+
   const messages = [
-    { role: "system" as const, content: PERSONA },
+    { role: "system" as const, content: systemPrompt },
     ...history.map((m) => ({
       role: m.role === "user" ? ("user" as const) : ("assistant" as const),
       content: m.content,
     })),
     {
       role: "user" as const,
-      content: session.courseId
-        ? ragPrompt(question, contextText || "（未检索到相关资料片段）", history.length)
-        : question,
+      content:
+        session.courseId && session.mode === "rag"
+          ? ragPrompt(question, contextText || "（未检索到相关资料片段）", history.length)
+          : question,
     },
   ];
 

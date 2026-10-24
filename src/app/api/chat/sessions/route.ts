@@ -11,14 +11,16 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { courseId, title } = (await req.json().catch(() => ({}))) as {
+  const { courseId, title, mode } = (await req.json().catch(() => ({}))) as {
     courseId?: string;
     title?: string;
+    mode?: "rag" | "feynman" | "socratic";
   };
   const row = {
     id: crypto.randomUUID(),
     courseId: courseId ?? null,
     title: title?.slice(0, 30) || "新会话",
+    mode: mode ?? "rag",
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };

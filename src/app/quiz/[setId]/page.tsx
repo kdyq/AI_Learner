@@ -24,6 +24,7 @@ export default async function QuizSetPage({
     <QuizRunner
       quizSetId={set.id}
       setTitle={set.title}
+      timeLimitMin={(set.config as { timeLimitMin?: number })?.timeLimitMin ?? 0}
       questions={rows.map((q) => ({
         id: q.id,
         type: q.type,

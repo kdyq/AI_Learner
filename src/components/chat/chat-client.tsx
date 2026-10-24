@@ -8,6 +8,7 @@ import {
   FileText,
   PaperPlaneTilt,
   Plus,
+  SpeakerHigh,
   SpinnerGap,
   TrashSimple,
 } from "@phosphor-icons/react";
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Markdown } from "./markdown";
+import { speak, stopSpeak } from "@/lib/speech";
 import type { Citation } from "@/db/schema";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +30,14 @@ export type ChatSession = {
   id: string;
   courseId: string | null;
   title: string;
+  mode?: "rag" | "feynman" | "socratic";
   updatedAt: number;
+};
+
+const MODE_UI: Record<NonNullable<ChatSession["mode"]>, { label: string; badge: string; hint: string }> = {
+  rag: { label: "资料问答", badge: "bg-sky-bg text-sky-ink", hint: "回答基于课程资料并附引用" },
+  feynman: { label: "费曼模式", badge: "bg-peach-bg text-peach-ink", hint: "你来讲解，AI 找漏洞并追问" },
+  socratic: { label: "苏格拉底", badge: "bg-mint-bg text-mint-ink", hint: "AI 引导式提问，不直接给答案" },
 };
 
 export type ChatMessage = {
@@ -63,7 +72,9 @@ export function ChatClient({
   const [streaming, setStreaming] = useState(false);
   const [streamText, setStreamText] = useState("");
   const [newCourse, setNewCourse] = useState(courses[0]?.id ?? "none");
+  const [newMode, setNewMode] = useState<"rag" | "feynman" | "socratic">("rag");
   const [generating, setGenerating] = useState(false);
+  const [speakingId, setSpeakingId] = useState<string | null>(null);
   const [drawerCitation, setDrawerCitation] = useState<Citation | null>(null);
   const [drawerChunk, setDrawerChunk] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -91,7 +102,7 @@ export function ChatClient({
     const res = await fetch("/api/chat/sessions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ courseId: newCourse === "none" ? null : newCourse }),
+      body: JSON.stringify({ courseId: newCourse === "none" ? null : newCourse, mode: newMode }),
     });
     if (!res.ok) return toast.error("创建会话失败");
     const d = (await res.json()) as { session: ChatSession };
@@ -164,7 +175,7 @@ export function ChatClient({
       const res = await fetch("/api/chat/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseId: newCourse === "none" ? null : newCourse }),
+        body: JSON.stringify({ courseId: newCourse === "none" ? null : newCourse, mode: newMode }),
       });
       const d = (await res.json()) as { session: ChatSession };
       setSessions((s) => [d.session, ...s]);
@@ -252,6 +263,18 @@ export function ChatClient({
             <Plus size={14} weight="bold" />
           </Button>
         </div>
+        <Select value={newMode} onValueChange={(v) => setNewMode(v as typeof newMode)}>
+          <SelectTrigger size="sm" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(MODE_UI).map(([k, v]) => (
+              <SelectItem key={k} value={k}>
+                {v.label} — {v.hint}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
           {sessions.map((s) => (
             <div
@@ -301,6 +324,14 @@ export function ChatClient({
           <h2 className="text-[14px] font-bold">
             {activeId ? sessions.find((s) => s.id === activeId)?.title : "新对话"}
           </h2>
+          {(() => {
+            const m = (activeId ? sessions.find((s) => s.id === activeId)?.mode : newMode) ?? "rag";
+            return (
+              <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${MODE_UI[m].badge}`}>
+                {MODE_UI[m].label}
+              </span>
+            );
+          })()}
           <span className="rounded-full bg-sky-bg px-2.5 py-0.5 text-[11px] font-semibold text-sky-ink">
             {activeId ? courseName(sessions.find((s) => s.id === activeId)?.courseId ?? null) : courseName(newCourse === "none" ? null : newCourse)}
           </span>
@@ -341,8 +372,29 @@ export function ChatClient({
                 </div>
               ) : (
                 <div className="w-full max-w-[92%]">
-                  <div className="rounded-[14px] bg-page px-4 py-3">
+                  <div className="group/msg relative rounded-[14px] bg-page px-4 py-3">
                     <Markdown content={m.content} />
+                    <button
+                      aria-label="朗读回答"
+                      title="语音朗读"
+                      onClick={() => {
+                        if (speakingId === m.id) {
+                          stopSpeak();
+                          setSpeakingId(null);
+                        } else {
+                          speak(m.content);
+                          setSpeakingId(m.id);
+                        }
+                      }}
+                      className={cn(
+                        "absolute top-2 right-2 grid size-7 place-items-center rounded-full transition-opacity",
+                        speakingId === m.id
+                          ? "bg-sky-bg text-sky-ink opacity-100"
+                          : "text-ink-3 opacity-0 hover:bg-surface-hover hover:text-ink group-hover/msg:opacity-100"
+                      )}
+                    >
+                      <SpeakerHigh size={14} />
+                    </button>
                   </div>
                   {m.citations && m.citations.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1.5">

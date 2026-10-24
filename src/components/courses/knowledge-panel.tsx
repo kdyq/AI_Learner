@@ -100,7 +100,8 @@ export function KnowledgePanel({
           {points.map((p) => (
             <article
               key={p.id}
-              className="rounded-[14px] bg-surface px-4 py-3.5 ring-1 ring-line transition-[transform,box-shadow] hover:-translate-y-[3px] hover:shadow-soft"
+              id={`kp-${encodeURIComponent(p.title)}`}
+              className="scroll-mt-24 rounded-[14px] bg-surface px-4 py-3.5 ring-1 ring-line transition-[transform,box-shadow] hover:-translate-y-[3px] hover:shadow-soft"
             >
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-[14px] font-semibold">{p.title}</h3>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -9,6 +9,7 @@ import {
   CheckSquare,
   Notebook,
   SquaresFour,
+  Timer,
   TextAa,
   XCircle,
 } from "@phosphor-icons/react";
@@ -59,15 +60,34 @@ export function QuizRunner({
   quizSetId,
   setTitle,
   questions,
+  timeLimitMin = 0,
 }: {
   quizSetId: string;
   setTitle: string;
   questions: RunnerQuestion[];
+  timeLimitMin?: number;
 }) {
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [submitting, setSubmitting] = useState(false);
   const [summary, setSummary] = useState<{ total: number; score: number; correctCount: number } | null>(null);
   const [results, setResults] = useState<Result[] | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(timeLimitMin * 60);
+
+  const submitRef = useRef(false);
+
+  // 模拟卷限时倒计时：归零自动交卷
+  useEffect(() => {
+    if (timeLimitMin <= 0 || summary) return;
+    if (secondsLeft <= 0) {
+      if (!submitRef.current) {
+        toast.warning("时间到，自动交卷");
+        document.getElementById("quiz-submit-btn")?.click();
+      }
+      return;
+    }
+    const t = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [secondsLeft, timeLimitMin, summary]);
 
   const setAnswer = (id: string, v: unknown) => setAnswers((prev) => ({ ...prev, [id]: v }));
 
@@ -76,9 +96,11 @@ export function QuizRunner({
     setAnswer(id, cur.includes(i) ? cur.filter((x) => x !== i) : [...cur, i].sort((a, b) => a - b));
   };
 
-  const submit = async () => {
+  const submit = async (auto = false) => {
+    if (submitting || summary) return;
     const unanswered = questions.filter((q) => answers[q.id] === undefined || answers[q.id] === "" || (Array.isArray(answers[q.id]) && (answers[q.id] as unknown[]).length === 0));
-    if (unanswered.length > 0 && !confirm(`还有 ${unanswered.length} 题未作答，确定提交？`)) return;
+    if (!auto && unanswered.length > 0 && !confirm(`还有 ${unanswered.length} 题未作答，确定提交？`)) return;
+    submitRef.current = true;
     setSubmitting(true);
     try {
       const res = await fetch("/api/quiz/submit", {
@@ -96,6 +118,7 @@ export function QuizRunner({
       toast.success(`批改完成：${d.score} 分`);
     } catch (err) {
       toast.error((err as Error).message);
+      submitRef.current = false;
     } finally {
       setSubmitting(false);
     }
@@ -113,6 +136,19 @@ export function QuizRunner({
         <span className="text-[12.5px] text-ink-3">
           共 <b className="num text-ink">{questions.length}</b> 题
         </span>
+        {timeLimitMin > 0 && !summary && (
+          <span
+            className={`ml-2 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[12px] font-bold ${
+              secondsLeft < 300 ? "bg-peach-bg text-peach-ink" : "bg-lemon-bg text-lemon-ink"
+            }`}
+          >
+            <Timer size={13} weight="fill" />
+            <span className="num">
+              {String(Math.floor(secondsLeft / 60)).padStart(2, "0")}:
+              {String(secondsLeft % 60).padStart(2, "0")}
+            </span>
+          </span>
+        )}
       </div>
 
       {summary && (
@@ -261,8 +297,8 @@ export function QuizRunner({
 
       {!results && (
         <div className="sticky bottom-4 flex justify-center">
-          <Button size="lg" onClick={submit} disabled={submitting} className="shadow-soft-lg">
-            {submitting ? "批改中…（简答题需 AI 评分）" : "提交答卷"}
+          <Button id="quiz-submit-btn" size="lg" onClick={() => void submit(false)} disabled={submitting} className="shadow-soft-lg">
+            {submitting ? "批改中…（简答题需 AI 评分）" : timeLimitMin > 0 ? "交卷" : "提交答卷"}
           </Button>
         </div>
       )}

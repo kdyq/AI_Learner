@@ -20,6 +20,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { UploadDialog, type CourseOption } from "@/components/courses/upload-dialog";
+import { SearchDialog } from "@/components/layout/search-dialog";
 
 const NAV_ITEMS = [
   { href: "/", label: "概览" },
@@ -92,6 +93,7 @@ export function TopNav({ streak = 0 }: { streak?: number }) {
               </Button>
             }
           />
+          <SearchDialog />
           <Button
             variant="ghost"
             size="icon"

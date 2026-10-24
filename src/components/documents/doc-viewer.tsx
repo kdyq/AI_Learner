@@ -38,13 +38,15 @@ export function DocViewer({
   fileType,
   chunks,
   needsOcrPages,
+  initialQuery = "",
 }: {
   title: string;
   fileType: string;
   chunks: ViewerChunk[];
   needsOcrPages: number[];
+  initialQuery?: string;
 }) {
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(initialQuery);
   const query = q.trim();
 
   const filtered = useMemo(() => {

@@ -20,6 +20,7 @@ export default function ChatPage() {
         id: s.id,
         courseId: s.courseId,
         title: s.title,
+        mode: s.mode ?? "rag",
         updatedAt: s.updatedAt,
       })) as ChatSession[]}
       courses={courseList}

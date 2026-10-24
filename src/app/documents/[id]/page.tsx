@@ -11,8 +11,10 @@ export const dynamic = "force-dynamic";
 
 export default async function DocumentPage({
   params,
+  searchParams,
 }: PageProps<"/documents/[id]">) {
   const { id } = await params;
+  const sp = await searchParams;
   const doc = db.select().from(documents).where(eq(documents.id, id)).get();
   if (!doc) notFound();
   const course = db.select().from(courses).where(eq(courses.id, doc.courseId)).get();
@@ -55,6 +57,7 @@ export default async function DocumentPage({
       <DocViewer
         title={doc.title}
         fileType={doc.fileType}
+        initialQuery={typeof sp.q === "string" ? sp.q : ""}
         needsOcrPages={needsOcrPages}
         chunks={rows.map((r) => ({
           id: r.id,

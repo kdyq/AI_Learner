@@ -70,6 +70,7 @@ export const chatSessions = sqliteTable("chat_sessions", {
   id: text("id").primaryKey(),
   courseId: text("course_id"),
   title: text("title").notNull().default("新会话"),
+  mode: text("mode").$type<"rag" | "feynman" | "socratic">().notNull().default("rag"),
   createdAt: integer("created_at").notNull().$defaultFn(() => Date.now()),
   updatedAt: integer("updated_at").notNull().$defaultFn(() => Date.now()),
 });
@@ -97,6 +98,8 @@ export type QuizConfig = {
   count: number;
   difficulty: number;
   scope: string;
+  /** 模拟卷限时（分钟），0 表示不限时 */
+  timeLimitMin?: number;
 };
 
 export const quizSets = sqliteTable("quiz_sets", {
