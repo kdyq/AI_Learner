@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>拾知 · 方案C 彩色便当</title>
+<link rel="stylesheet" href="assets/phosphor-regular.css">
+<style>
+  /* ============ 方案C 彩色便当 ============
+     气质：轻快的学生仪表盘、便当格模块、柔和彩色分区
+     刻度：DESIGN_VARIANCE 7 / MOTION 6 / DENSITY 4
+     规则：圆角体系=卡片18px/输入12px/按钮全圆；主操作珊瑚橙；
+           模块底色为低饱和功能分区色（每个模块一色，不再叠加强调色）；
+           数字一律等宽字体 */
+  :root {
+    --bg: #F3F4F9;
+    --surface: #FFFFFF;
+    --ink: #22242D;
+    --ink-2: #5D6170;
+    --ink-3: #9A9EAD;
+    --line: #E6E8F1;
+    --accent: #D8503A;
+    --accent-deep: #C4432E;
+    --mint-bg: #E1F2E8;   --mint-ink: #1E6B4B;  --mint-line: #C4E2D1;
+    --sky-bg: #E3EDFF;    --sky-ink: #2C5CC5;   --sky-line: #C7D9F8;
+    --peach-bg: #FFE8DD;  --peach-ink: #B44E2A; --peach-line: #F8D2C1;
+    --lemon-bg: #FFF2D4;  --lemon-ink: #8A6A12; --lemon-line: #F2E0AE;
+    --rose-bg: #FFE2EC;   --rose-ink: #B44E68;  --rose-line: #F8C7D8;
+    --sans: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    --mono: "Cascadia Code", "Consolas", "JetBrains Mono", ui-monospace, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--sans); background: var(--bg); color: var(--ink);
+    min-width: 1120px; font-size: 14px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  i.ph { font-size: 17px; line-height: 1; }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  /* ---------- 方案评审条 ---------- */
+  .review-bar {
+    display: flex; align-items: center; gap: 4px;
+    background: #22242D; padding: 6px 14px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .review-bar .rb-label { color: rgba(255,255,255,.45); font-size: 11.5px; margin-right: 8px; font-family: var(--mono); letter-spacing: .05em; }
+  .review-bar a { color: rgba(255,255,255,.75); text-decoration: none; font-size: 12px; padding: 3px 10px; border-radius: 999px; }
+  .review-bar a:hover { color: #fff; background: rgba(255,255,255,.1); }
+  .review-bar a.on { background: #fff; color: #22242D; font-weight: 600; }
+
+  .wrap { max-width: 1220px; margin: 0 auto; padding: 22px 30px 60px; }
+
+  /* ---------- 顶部导航 ---------- */
+  .topbar { display: flex; align-items: center; gap: 20px; margin-bottom: 24px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo-mark { width: 34px; height: 34px; border-radius: 12px; background: var(--accent); color: #fff; display: grid; place-items: center; }
+  .brand b { font-size: 16px; font-weight: 750; }
+  .nav-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--ink-2); text-decoration: none;
+    padding: 7px 14px; border-radius: 999px; transition: background .15s ease, color .15s ease;
+  }
+  .nav-pill i.ph { font-size: 15px; }
+  .nav-pill:hover { background: #E9EBF4; color: var(--ink); }
+  .nav-pill.on { background: var(--ink); color: #fff; font-weight: 600; }
+  .top-right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+  .streak {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--peach-bg); color: var(--peach-ink);
+    font-size: 12.5px; font-weight: 600; padding: 7px 14px; border-radius: 999px;
+  }
+  .streak i.ph { font-size: 14px; }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--accent); color: #fff; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 650; padding: 9px 18px; border-radius: 999px; font-family: inherit;
+    transition: background .15s ease, transform .1s ease;
+  }
+  .btn-primary:hover { background: var(--accent-deep); }
+  .btn-primary:active { transform: scale(.97); }
+  .btn-primary i.ph { font-size: 13.5px; }
+
+  /* ---------- 问候 ---------- */
+  .hello { margin: 4px 2px 20px; }
+  .hello h1 { font-size: 21px; font-weight: 700; letter-spacing: .01em; }
+  .hello p { font-size: 13px; color: var(--ink-2); margin-top: 3px; }
+
+  /* ---------- 便当格 ---------- */
+  .bento { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+  .tile {
+    border-radius: 18px; padding: 20px 22px; min-height: 150px;
+    transition: transform .2s cubic-bezier(.2,.8,.3,1), box-shadow .2s ease;
+  }
+  .tile:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(34,36,45,.09); }
+  .tile-label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 650; margin-bottom: 10px; }
+  .tile-label i.ph { font-size: 15px; }
+
+  .t-review { grid-column: span 7; background: var(--mint-bg); color: var(--mint-ink); }
+  .t-chat { grid-column: span 5; background: var(--sky-bg); color: var(--sky-ink); }
+  .t-course { grid-column: span 4; background: var(--surface); border: 1px solid var(--line); }
+  .t-wrong { grid-column: span 4; background: var(--peach-bg); color: var(--peach-ink); }
+  .t-heat { grid-column: span 4; background: var(--lemon-bg); color: var(--lemon-ink); }
+  .t-files { grid-column: span 8; background: var(--surface); border: 1px solid var(--line); }
+  .t-graph { grid-column: span 4; background: var(--rose-bg); color: var(--rose-ink); }
+
+  /* 复习格 */
+  .rv-top { display: flex; align-items: baseline; gap: 26px; }
+  .rv-num { display: flex; align-items: baseline; gap: 7px; }
+  .rv-num .n { font-size: 46px; font-weight: 700; line-height: 1; }
+  .rv-num .u { font-size: 12.5px; }
+  .rv-sub { font-size: 12.5px; opacity: .85; }
+  .rv-sub b { font-family: var(--mono); }
+  .rv-body { display: flex; gap: 26px; align-items: center; margin-top: 18px; }
+
+  /* 闪卡翻转演示 */
+  .flip { perspective: 1000px; width: 320px; flex: none; cursor: pointer; }
+  .flip-inner { position: relative; width: 100%; height: 148px; transform-style: preserve-3d; }
+  .face {
+    position: absolute; inset: 0; border-radius: 14px; backface-visibility: hidden;
+    background: var(--surface); box-shadow: 0 6px 20px rgba(30,107,75,.12);
+    padding: 18px 20px; display: flex; flex-direction: column;
+  }
+  .face .tag { font-size: 10.5px; letter-spacing: .1em; color: var(--ink-3); font-family: var(--mono); }
+  .face .txt { font-size: 15.5px; font-weight: 650; color: var(--ink); margin-top: 8px; line-height: 1.45; }
+  .face .hint { margin-top: auto; font-size: 11px; color: var(--ink-3); display: flex; align-items: center; gap: 5px; }
+  .face .hint i.ph { font-size: 12px; }
+  .face.back { transform: rotateY(180deg); }
+  .face.back .txt { font-size: 13px; font-weight: 500; }
+  .rv-cta { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+  .btn-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--mint-ink); color: #fff; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 650; padding: 10px 20px; border-radius: 999px; font-family: inherit;
+    transition: filter .15s ease, transform .1s ease;
+  }
+  .btn-pill:hover { filter: brightness(1.12); }
+  .btn-pill:active { transform: scale(.97); }
+  .btn-pill i.ph { font-size: 13px; }
+  .btn-ghost-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1.5px solid var(--mint-line); background: none; color: var(--mint-ink);
+    font-size: 12.5px; font-weight: 600; padding: 8px 16px; border-radius: 999px; cursor: pointer; font-family: inherit;
+    transition: background .15s ease;
+  }
+  .btn-ghost-pill:hover { background: rgba(255,255,255,.6); }
+
+  /* 问答格 */
+  .bubble { background: var(--surface); border-radius: 12px; padding: 11px 14px; font-size: 13px; color: var(--ink); box-shadow: 0 3px 12px rgba(44,92,197,.08); }
+  .bubble.you { font-weight: 600; }
+  .bubble.ai { margin-top: 8px; font-size: 12.5px; color: var(--ink-2); }
+  .bubble.ai sup { font-family: var(--mono); color: var(--sky-ink); font-size: 10px; }
+  .src-mini { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-family: var(--mono); margin-top: 10px; background: rgba(255,255,255,.75); padding: 3px 10px; border-radius: 999px; }
+  .src-mini i.ph { font-size: 12px; }
+  .chat-input { display: flex; align-items: center; gap: 8px; margin-top: 12px; background: var(--surface); border-radius: 12px; padding: 7px 7px 7px 14px; box-shadow: 0 3px 12px rgba(44,92,197,.08); }
+  .chat-input input { flex: 1; border: none; outline: none; font-size: 12.5px; font-family: inherit; background: none; color: var(--ink); }
+  .chat-input input::placeholder { color: var(--ink-3); }
+  .chat-send { width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--sky-ink); color: #fff; display: grid; place-items: center; cursor: pointer; flex: none; transition: filter .15s ease; }
+  .chat-send:hover { filter: brightness(1.15); }
+  .chat-send i.ph { font-size: 13px; }
+
+  /* 课程格（进度环） */
+  .crs { display: flex; align-items: center; gap: 18px; }
+  .ring-box { position: relative; width: 96px; height: 96px; flex: none; }
+  .ring-box svg { transform: rotate(-90deg); display: block; }
+  .ring-bg { fill: none; stroke: #EDEFF6; stroke-width: 8; }
+  .ring-fg { fill: none; stroke: #2FA372; stroke-width: 8; stroke-linecap: round; }
+  .ring-num { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--mono); font-size: 17px; font-weight: 650; }
+  .crs-info h3 { font-size: 15px; font-weight: 700; }
+  .crs-info p { font-size: 12px; color: var(--ink-2); margin-top: 4px; }
+  .crs-info p b { font-family: var(--mono); }
+
+  /* 错题格 */
+  .wr-num { display: flex; align-items: baseline; gap: 7px; }
+  .wr-num .n { font-size: 42px; font-weight: 700; line-height: 1; }
+  .wr-num .u { font-size: 12.5px; }
+  .wr-sub { font-size: 12.5px; opacity: .85; margin-top: 8px; }
+  .wr-sub b { font-family: var(--mono); }
+  .wr-btn { margin-top: 14px; display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid var(--peach-line); background: none; color: var(--peach-ink); font-size: 12.5px; font-weight: 650; padding: 8px 18px; border-radius: 999px; cursor: pointer; font-family: inherit; transition: background .15s ease; }
+  .wr-btn:hover { background: rgba(255,255,255,.65); }
+  .wr-btn i.ph { font-size: 12.5px; }
+
+  /* 热力格 */
+  .heat-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; margin-top: 6px; }
+  .heat-cell { aspect-ratio: 1; border-radius: 5px; background: var(--lemon-ink); opacity: .14; }
+  .heat-sub { font-size: 12px; margin-top: 12px; opacity: .9; }
+  .heat-sub b { font-family: var(--mono); }
+
+  /* 文档格 */
+  .file-row { display: flex; gap: 12px; }
+  .file-chip { flex: 1; display: flex; align-items: center; gap: 11px; background: #F8F9FD; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; transition: border-color .15s ease; }
+  .file-chip:hover { border-color: #C9CEE0; }
+  .file-ico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); flex: none; }
+  .file-chip .fn { font-size: 12.5px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-chip .fs { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
+  .file-chip .fs i.ph { font-size: 11px; color: #2FA372; vertical-align: -1px; }
+
+  /* 图谱格 */
+  .gp-svg { display: block; width: 100%; height: auto; margin-top: 4px; }
+  .gp-edge { stroke: var(--rose-line); stroke-width: 1.5; fill: none; }
+  .gp-node { fill: var(--rose-ink); opacity: 1; }
+  .gp-link { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; font-size: 12.5px; font-weight: 650; color: var(--rose-ink); text-decoration: none; }
+  .gp-link:hover { text-decoration: underline; }
+  .gp-link i.ph { font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="review-bar">
+  <span class="rb-label">设计稿 · 方案C 彩色便当</span>
+  <a href="a-clear-desk.html">A</a>
+  <a href="b-night-deck.html">B</a>
+  <a class="on" href="c-bento-campus.html">C</a>
+  <a href="index.html">对比总览</a>
+</div>
+
+<div class="wrap">
+  <nav class="topbar anim">
+    <div class="brand">
+      <div class="logo-mark"><i class="ph ph-books"></i></div>
+      <b>拾知</b>
+    </div>
+    <a class="nav-pill on" href="#"><i class="ph ph-squares-four"></i>概览</a>
+    <a class="nav-pill" href="#"><i class="ph ph-books"></i>课程</a>
+    <a class="nav-pill" href="#"><i class="ph ph-chat-circle-text"></i>问答</a>
+    <a class="nav-pill" href="#"><i class="ph ph-list-checks"></i>题库</a>
+    <a class="nav-pill" href="#"><i class="ph ph-cards"></i>复习</a>
+    <a class="nav-pill" href="#"><i class="ph ph-graph"></i>图谱</a>
+    <div class="top-right">
+      <span class="streak"><i class="ph ph-fire"></i>连续 <span class="num">14</span> 天</span>
+      <button class="btn-primary"><i class="ph ph-plus"></i>上传资料</button>
+    </div>
+  </nav>
+
+  <div class="hello anim">
+    <h1>晚上好，继续操作系统</h1>
+    <p>10月24日 周五 · 期中考试还有 12 天，先清掉今天的复习队列吧</p>
+  </div>
+
+  <div class="bento">
+    <!-- 今日复习 -->
+    <section class="tile t-review anim-tile">
+      <div class="tile-label"><i class="ph ph-cards"></i>今日复习</div>
+      <div class="rv-top">
+        <div class="rv-num"><span class="n num" data-count="23">23</span><span class="u">张卡片</span></div>
+        <div class="rv-sub">错题 <b>12</b> 道 · 新知识点 <b>6</b> 个</div>
+      </div>
+      <div class="rv-body">
+        <div class="flip" id="flipCard" title="点击翻转">
+          <div class="flip-inner">
+            <div class="face front">
+              <span class="tag">闪卡 · 操作系统</span>
+              <div class="txt">什么是 PCB？它保存哪些信息？</div>
+              <div class="hint"><i class="ph ph-cards"></i>点击卡片查看答案</div>
+            </div>
+            <div class="face back">
+              <span class="tag">答案</span>
+              <div class="txt">进程控制块：操作系统管理进程的核心数据结构，保存 PID、进程状态、程序计数器、寄存器上下文与内存信息。</div>
+            </div>
+          </div>
+        </div>
+        <div class="rv-cta">
+          <button class="btn-pill"><i class="ph ph-play"></i>开始复习</button>
+          <button class="btn-ghost-pill">只练错题</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 继续问答 -->
+    <section class="tile t-chat anim-tile">
+      <div class="tile-label"><i class="ph ph-chat-circle-text"></i>继续问答</div>
+      <div class="bubble you">为什么多级页表能节省内存？</div>
+      <div class="bubble ai">一级表常驻内存，二级表按需创建，稀疏地址空间下页表占用从 4MB 降到几十 KB<sup>[1]</sup>……</div>
+      <span class="src-mini"><i class="ph ph-file-pdf"></i>Chapter3.pdf · p.42</span>
+      <div class="chat-input">
+        <input placeholder="继续提问……">
+        <button class="chat-send"><i class="ph ph-paper-plane-tilt"></i></button>
+      </div>
+    </section>
+
+    <!-- 课程进度 -->
+    <section class="tile t-course anim-tile">
+      <div class="tile-label" style="color: var(--ink-2)"><i class="ph ph-target"></i>操作系统</div>
+      <div class="crs">
+        <div class="ring-box">
+          <svg width="96" height="96" viewBox="0 0 96 96">
+            <circle class="ring-bg" cx="48" cy="48" r="40"></circle>
+            <circle class="ring-fg" cx="48" cy="48" r="40" style="stroke-dasharray: 251.3; stroke-dashoffset: 251.3"></circle>
+          </svg>
+          <span class="ring-num num" data-count="62" data-suffix="%">62%</span>
+        </div>
+        <div class="crs-info">
+          <h3>第 4 章 处理机调度</h3>
+          <p>知识点 <b>86</b> 个 · 已掌握 <b>53</b></p>
+          <p>上次学习 · 2 小时前</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 错题本 -->
+    <section class="tile t-wrong anim-tile">
+      <div class="tile-label"><i class="ph ph-notebook"></i>错题本</div>
+      <div class="wr-num"><span class="n num" data-count="12">12</span><span class="u">道待重练</span></div>
+      <div class="wr-sub">最近正确率 <b>71.4%</b>，比上周高 <b>6.2</b> 个百分点</div>
+      <button class="wr-btn"><i class="ph ph-lightning"></i>去重练</button>
+    </section>
+
+    <!-- 本周热力 -->
+    <section class="tile t-heat anim-tile">
+      <div class="tile-label"><i class="ph ph-chart-bar"></i>本周学习</div>
+      <div class="heat-grid">
+        <span class="heat-cell" style="opacity:.3"></span><span class="heat-cell" style="opacity:.55"></span><span class="heat-cell" style="opacity:.9"></span><span class="heat-cell" style="opacity:.4"></span><span class="heat-cell" style="opacity:1"></span><span class="heat-cell" style="opacity:.7"></span><span class="heat-cell" style="opacity:.2"></span>
+        <span class="heat-cell" style="opacity:.45"></span><span class="heat-cell" style="opacity:.2"></span><span class="heat-cell" style="opacity:.65"></span><span class="heat-cell" style="opacity:.85"></span><span class="heat-cell" style="opacity:.35"></span><span class="heat-cell" style="opacity:.5"></span><span class="heat-cell" style="opacity:.15"></span>
+        <span class="heat-cell" style="opacity:.25"></span><span class="heat-cell" style="opacity:.75"></span><span class="heat-cell" style="opacity:.4"></span><span class="heat-cell" style="opacity:.6"></span><span class="heat-cell" style="opacity:.9"></span><span class="heat-cell" style="opacity:.3"></span><span class="heat-cell" style="opacity:.55"></span>
+      </div>
+      <div class="heat-sub">共 <b>9.4</b> 小时 · 周五最投入</div>
+    </section>
+
+    <!-- 最近资料 -->
+    <section class="tile t-files anim-tile">
+      <div class="tile-label" style="color: var(--ink-2)"><i class="ph ph-file-doc"></i>最近资料</div>
+      <div class="file-row">
+        <div class="file-chip">
+          <div class="file-ico"><i class="ph ph-file-pdf"></i></div>
+          <div><div class="fn">Chapter1.pdf</div><div class="fs"><i class="ph ph-check-circle"></i> 已解析 · 86 个知识点</div></div>
+        </div>
+        <div class="file-chip">
+          <div class="file-ico"><i class="ph ph-presentation-chart"></i></div>
+          <div><div class="fn">Chapter2.pptx</div><div class="fs"><i class="ph ph-check-circle"></i> 已解析 · 54 个知识点</div></div>
+        </div>
+        <div class="file-chip">
+          <div class="file-ico"><i class="ph ph-markdown-logo"></i></div>
+          <div><div class="fn">课堂笔记.md</div><div class="fs"><i class="ph ph-check-circle"></i> 已解析 · 31 个知识点</div></div>
+        </div>
+        <div class="file-chip">
+          <div class="file-ico"><i class="ph ph-file-doc"></i></div>
+          <div><div class="fn">2024期中试卷.docx</div><div class="fs">解析中……</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 图谱入口 -->
+    <section class="tile t-graph anim-tile">
+      <div class="tile-label"><i class="ph ph-graph"></i>知识图谱</div>
+      <svg class="gp-svg" viewBox="0 0 260 108">
+        <path class="gp-edge" d="M40 66 L104 30" /><path class="gp-edge" d="M40 66 L100 86" />
+        <path class="gp-edge" d="M104 30 L170 20" /><path class="gp-edge" d="M104 30 L176 54" />
+        <path class="gp-edge" d="M100 86 L176 54" /><path class="gp-edge" d="M100 86 L168 94" />
+        <path class="gp-edge" d="M176 54 L226 38" />
+        <circle class="gp-node" cx="40" cy="66" r="5.5" />
+        <circle class="gp-node" cx="104" cy="30" r="6.5" />
+        <circle class="gp-node" cx="100" cy="86" r="5.5" />
+        <circle class="gp-node" cx="176" cy="54" r="6.5" />
+        <circle class="gp-node" cx="170" cy="20" r="4.5" />
+        <circle class="gp-node" cx="168" cy="94" r="4.5" />
+        <circle class="gp-node" cx="226" cy="38" r="4.5" />
+      </svg>
+      <a class="gp-link" href="#">进入完整图谱 <i class="ph ph-arrow-right"></i></a>
+    </section>
+  </div>
+</div>
+
+<script src="assets/gsap.min.js"></script>
+<script>
+  // 动效动机：格子弹入（模块节奏）；数字滚动（状态）；
+  // 进度环描边（达成感）；热力格随机浮现（本周全貌）；
+  // 点击翻卡（预演闪卡复习这一核心交互）。全部尊重减动效。
+  const mm = gsap.matchMedia();
+  mm.add("(prefers-reduced-motion: no-preference)", () => {
+    const tl = gsap.timeline({ defaults: { ease: "power2.out", duration: 0.45 } });
+    tl.from(".topbar", { y: -12, autoAlpha: 0 })
+      .from(".hello", { y: 10, autoAlpha: 0 }, "-=0.2")
+      .from(".anim-tile", { y: 16, scale: 0.96, autoAlpha: 0, stagger: 0.07, ease: "back.out(1.4)" }, "-=0.15");
+
+    document.querySelectorAll("[data-count]").forEach((el) => {
+      const end = +el.dataset.count;
+      const suffix = el.dataset.suffix || "";
+      const proxy = { v: 0 };
+      gsap.to(proxy, {
+        v: end, duration: 1, ease: "power1.out",
+        onUpdate: () => { el.textContent = Math.round(proxy.v) + suffix; },
+      });
+    });
+
+    // 课程进度环：62% → 周长 251.3 * 0.38
+    gsap.to(".ring-fg", { strokeDashoffset: 251.3 * (1 - 0.62), duration: 1.1, ease: "power2.inOut", delay: 0.3 });
+
+    // 热力格浮现
+    gsap.from(".heat-cell", { scale: 0, stagger: { each: 0.012, from: "random" }, duration: 0.3, ease: "back.out(2)", delay: 0.4 });
+
+    // 图谱连线 + 节点
+    gsap.set(".gp-edge", { strokeDasharray: 110, strokeDashoffset: 110 });
+    gsap.to(".gp-edge", { strokeDashoffset: 0, stagger: 0.06, duration: 0.55, ease: "power1.inOut", delay: 0.5 });
+    gsap.from(".gp-node", { scale: 0, transformOrigin: "50% 50%", stagger: 0.04, duration: 0.3, ease: "back.out(2)", delay: 0.6 });
+
+    // 闪卡点击翻转（预演复习交互）
+    const flip = document.getElementById("flipCard");
+    if (flip) {
+      flip.addEventListener("click", () => {
+        gsap.to(flip.querySelector(".flip-inner"), { rotationY: "+=180", duration: 0.6, ease: "power2.inOut" });
+      });
+    }
+  });
+
+  // 翻转在减动效模式下仍然可用（无动画直接切换）
+  const mmFlip = gsap.matchMedia();
+  mmFlip.add("(prefers-reduced-motion: reduce)", () => {
+    const flip = document.getElementById("flipCard");
+    flip && flip.addEventListener("click", () => {
+      const inner = flip.querySelector(".flip-inner");
+      inner.style.transition = "none";
+      inner.style.transform = inner.style.transform === "rotateY(180deg)" ? "" : "rotateY(180deg)";
+    });
+  });
+</script>
+</body>
+</html>
