@@ -13,6 +13,7 @@ async function useEcharts() {
     HeatmapChart,
     LineChart,
     BarChart,
+    components.TitleComponent,
     components.CalendarComponent,
     components.TooltipComponent,
     components.VisualMapComponent,
