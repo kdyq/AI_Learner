@@ -1,26 +1,164 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
+@custom-variant dark (&:is(.dark *));
+
+/* ===== 拾知设计 tokens（DEV.md §3.1，首版仅浅色）===== */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* 中性 */
+  --bg: #F3F4F9;
+  --surface: #FFFFFF;
+  --ink: #22242D;
+  --ink-2: #5D6170;
+  --ink-3: #9A9EAD;
+  --line: #E6E8F1;
+  --surface-hover: #EEF0F6;
+
+  /* 主操作色（唯一强调色：主按钮/链接/选中态） */
+  --accent: #D8503A;
+  --accent-deep: #C4432E;
+
+  /* 功能分区色：底/深字/边线 三件套 */
+  --mint-bg: #E1F2E8;  --mint-ink: #1E6B4B;  --mint-line: #C4E2D1;
+  --sky-bg: #E3EDFF;   --sky-ink: #2C5CC5;   --sky-line: #C7D9F8;
+  --peach-bg: #FFE8DD; --peach-ink: #B44E2A; --peach-line: #F8D2C1;
+  --lemon-bg: #FFF2D4; --lemon-ink: #8A6A12; --lemon-line: #F2E0AE;
+  --rose-bg: #FFE2EC;  --rose-ink: #B44E68;  --rose-line: #F8C7D8;
+
+  /* 语义色 */
+  --ok: #2FA372;  --warn: #C7902B;  --danger: #C4432E;
+
+  /* ===== shadcn 语义变量映射到设计 tokens ===== */
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary: var(--accent);
+  --primary-foreground: #FFFFFF;
+  --secondary: var(--surface-hover);
+  --secondary-foreground: var(--ink);
+  --muted: var(--surface-hover);
+  --muted-foreground: var(--ink-2);
+  --hover: var(--surface-hover);
+  --hover-foreground: var(--ink);
+  --destructive: var(--danger);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--accent);
+  --chart-1: var(--sky-ink);
+  --chart-2: var(--mint-ink);
+  --chart-3: var(--peach-ink);
+  --chart-4: var(--lemon-ink);
+  --chart-5: var(--rose-ink);
+  /* 圆角：内嵌元素 14px；卡片 18px 在组件层写死 */
+  --radius: 14px;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--ring);
+  --color-sidebar-border: var(--border);
+  --color-sidebar-accent-foreground: var(--hover-foreground);
+  --color-sidebar-accent: var(--hover);
+  --color-sidebar-primary-foreground: var(--primary-foreground);
+  --color-sidebar-primary: var(--primary);
+  --color-sidebar-foreground: var(--foreground);
+  --color-sidebar: var(--surface);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-hover-foreground: var(--hover-foreground);
+  --color-hover: var(--hover);
+  --color-accent: var(--hover);
+  --color-accent-foreground: var(--hover-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.2);
+  --radius-2xl: 18px;
+  --radius-3xl: 18px;
+  --radius-4xl: 18px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* 设计 token 的工具类命名空间 */
+@theme {
+  --color-page: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-primary-deep: var(--accent-deep);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-mint-bg: var(--mint-bg);
+  --color-mint-ink: var(--mint-ink);
+  --color-mint-line: var(--mint-line);
+  --color-sky-bg: var(--sky-bg);
+  --color-sky-ink: var(--sky-ink);
+  --color-sky-line: var(--sky-line);
+  --color-peach-bg: var(--peach-bg);
+  --color-peach-ink: var(--peach-ink);
+  --color-peach-line: var(--peach-line);
+  --color-lemon-bg: var(--lemon-bg);
+  --color-lemon-ink: var(--lemon-ink);
+  --color-lemon-line: var(--lemon-line);
+  --color-rose-bg: var(--rose-bg);
+  --color-rose-ink: var(--rose-ink);
+  --color-rose-line: var(--rose-line);
+
+  /* 字体：系统栈 + 数字等宽 */
+  --font-sans: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  --font-mono: "Cascadia Code", "Consolas", ui-monospace, monospace;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+  html {
+    @apply font-sans;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  /* 所有数字：等宽 + 表格数字 */
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  /* 柔和投影（白底悬浮） */
+  .shadow-soft {
+    box-shadow: 0 10px 28px rgba(34, 36, 45, 0.09);
+  }
+  .shadow-soft-lg {
+    box-shadow: 0 16px 40px rgba(34, 36, 45, 0.13);
+  }
 }
