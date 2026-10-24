@@ -7,8 +7,10 @@ import { courses, documents } from "@/db/schema";
 import { CourseDialog } from "@/components/courses/course-dialog";
 import { UploadDialog } from "@/components/courses/upload-dialog";
 import { DocumentsList, type DocRow } from "@/components/courses/documents-list";
+import { KnowledgePanel, type KnowledgePointRow } from "@/components/courses/knowledge-panel";
 import { CourseDeleteButton } from "@/components/courses/course-delete-button";
 import { COURSE_STYLES } from "@/lib/course-colors";
+import { latestKnowledgePoints } from "@/lib/ai/knowledge";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +55,19 @@ export default async function CourseDetailPage({
       </div>
 
       <DocumentsList courseId={course.id} initial={docs as DocRow[]} />
+
+      <KnowledgePanel
+        courseId={course.id}
+        points={latestKnowledgePoints(course.id, 60).map((p) => ({
+          id: p.id,
+          title: p.title,
+          content: p.content,
+          importance: p.importance,
+          keywords: p.keywords ?? [],
+          documentId: p.documentId,
+          mastery: p.mastery,
+        })) as KnowledgePointRow[]}
+      />
     </div>
   );
 }

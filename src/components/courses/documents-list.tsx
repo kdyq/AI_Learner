@@ -10,6 +10,7 @@ import {
   FilePdf,
   FilePpt,
   FileText,
+  Sparkle,
   SpinnerGap,
   TrashSimple,
   WarningCircle,
@@ -27,6 +28,7 @@ export type DocRow = {
   charCount: number | null;
   status: "pending" | "parsing" | "ready" | "error";
   errorMessage: string | null;
+  summary: string | null;
   meta: Record<string, unknown> | null;
   createdAt: number;
 };
@@ -49,6 +51,36 @@ function fmtSize(bytes: number) {
 export function DocumentsList({ courseId, initial }: { courseId: string; initial: DocRow[] }) {
   const router = useRouter();
   const [docs, setDocs] = useState(initial);
+  const [processing, setProcessing] = useState<string | null>(null);
+
+  const aiProcess = async (id: string, title: string) => {
+    setProcessing(id);
+    try {
+      const [sumRes, kpRes] = [
+        await fetch("/api/ai/summarize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ documentId: id }),
+        }),
+        await fetch("/api/ai/knowledge-points", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ documentId: id }),
+        }),
+      ];
+      if (!sumRes.ok || !kpRes.ok) {
+        const failed = !sumRes.ok ? await sumRes.json() : await kpRes.json();
+        throw new Error((failed as { error?: string }).error ?? "AI 加工失败");
+      }
+      const kp = (await kpRes.json()) as { created: number };
+      toast.success(`「${title}」加工完成：摘要已生成，新增知识点 ${kp.created} 个`);
+      router.refresh();
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setProcessing(null);
+    }
+  };
 
   // 解析中/排队中时轮询状态直至稳定
   const busy = docs.some((d) => d.status === "pending" || d.status === "parsing");
@@ -129,6 +161,18 @@ export function DocumentsList({ courseId, initial }: { courseId: string; initial
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                {d.status === "ready" && (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="AI 加工（摘要+知识点）"
+                    title="AI 加工：摘要 + 知识点"
+                    disabled={processing === d.id}
+                    onClick={() => void aiProcess(d.id, d.title)}
+                  >
+                    {processing === d.id ? <SpinnerGap className="animate-spin" size={15} /> : <Sparkle size={15} />}
+                  </Button>
+                )}
                 {d.status !== "pending" && d.status !== "parsing" && (
                   <Button variant="ghost" size="icon-sm" aria-label="重新解析" onClick={() => reparse(d.id)}>
                     <ArrowsClockwise size={15} />
@@ -139,6 +183,12 @@ export function DocumentsList({ courseId, initial }: { courseId: string; initial
                 </Button>
               </div>
             </div>
+            {d.status === "ready" && d.summary && (
+              <p className="mt-2 line-clamp-2 rounded-xl bg-page px-3 py-2 text-[12.5px] leading-relaxed text-ink-2">
+                <Sparkle size={11} className="mr-1 inline text-sky-ink" />
+                {d.summary}
+              </p>
+            )}
             {d.status === "error" && d.errorMessage && (
               <p className="mt-2 flex items-start gap-1.5 rounded-xl bg-peach-bg px-3 py-2 text-[12.5px] text-peach-ink">
                 <WarningCircle size={14} className="mt-0.5 shrink-0" />

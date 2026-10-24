@@ -47,6 +47,12 @@ export function getAiSettings(): AiSettings {
   } catch {
     // 表尚未建好等情况：直接用默认值
   }
+  // 空字符串视为未设置：回退 .env.local
+  if (!merged.chat.apiKey) merged.chat.apiKey = envKey;
+  if (!merged.vision.apiKey) merged.vision.apiKey = merged.chat.apiKey;
+  if (merged.embedding.enabled && !merged.embedding.apiKey) {
+    merged.embedding.apiKey = merged.chat.apiKey;
+  }
   // vision 继承 chat
   if (merged.vision.inherit) {
     merged.vision.baseUrl = merged.chat.baseUrl;
