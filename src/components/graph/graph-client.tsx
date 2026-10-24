@@ -150,40 +150,81 @@ export function GraphClient({
         graph = new Graph({
         container: el,
         width: el.clientWidth,
-        height: 520,
+        height: 640,
         autoFit: "view",
+        padding: 30,
         data: {
           nodes: nodes.map((n) => ({ id: n.id, data: { label: n.name, type: n.type } })),
           edges: edges.map((e) => ({ id: e.id, source: e.sourceId, target: e.targetId, data: { label: e.relation } })),
         },
         node: {
           style: {
-            size: (d: NodeData) => ((d.data as { type?: string })?.type === "concept" ? 34 : 26),
+            size: (d: NodeData) => ((d.data as { type?: string })?.type === "concept" ? 22 : 15),
             fill: (d: NodeData) =>
               TYPE_COLOR[((d.data as { type?: string })?.type as GNode["type"]) ?? "concept"] ?? "#5D6170",
+            lineWidth: 1.5,
+            lineFallWidth: 3,
             labelText: (d: NodeData) => String((d.data as { label?: string })?.label ?? ""),
-            labelFill: "#22242D",
-            labelFontSize: 11,
+            labelFill: "#3A3D49",
+            labelFontSize: 10,
             labelPlacement: "bottom" as const,
+            labelOffsetY: 2,
             labelWordWrap: true,
+            labelMaxLength: 12,
+            labelBackground: true,
+            labelBackgroundFill: "rgba(255,255,255,.92)",
+            labelBackgroundRadius: 4,
+            labelBackgroundLineWidth: 0,
+            labelPadding: [1, 3],
+          },
+          state: {
+            active: { halo: true, haloStroke: "#9A9EAD", labelFontSize: 11 },
           },
         },
         edge: {
           style: {
-            stroke: "#9A9EAD",
-            lineWidth: 1.2,
+            stroke: "#C9CCD9",
+            lineWidth: 1,
             endArrow: true,
+            endArrowSize: 6,
+            endArrowFill: "#C9CCD9",
+            // 关系文字默认隐藏，悬停该边时显示
             labelText: (d: EdgeData) => String((d.data as { label?: string })?.label ?? ""),
-            labelFontSize: 9,
-            labelFill: "#9A9EAD",
+            labelFontSize: 8.5,
+            labelFill: "#7A7E8E",
+            labelOpacity: 0,
             labelBackground: true,
-            labelBackgroundFill: "#F3F4F9",
+            labelBackgroundFill: "#FFFFFF",
+            labelBackgroundOpacity: 0,
             labelBackgroundRadius: 4,
-            labelBackgroundOpacity: 0.85,
+            labelPadding: [1, 3],
+          },
+          state: {
+            active: {
+              stroke: "#8A8FA3",
+              lineWidth: 1.6,
+              labelOpacity: 1,
+              labelBackgroundOpacity: 0.95,
+            },
           },
         },
-        layout: { type: "force", linkDistance: 110, preventOverlap: true, nodeStrength: -60 },
-          behaviors: ["drag-canvas", "zoom-canvas", "drag-element"],
+        layout: {
+          type: "force",
+          linkDistance: 150,
+          nodeStrength: -160,
+          edgeStrength: 50,
+          gravity: 5,
+          preventOverlap: true,
+          nodeSize: 34,
+          alphaDecay: 0.028,
+          alphaMin: 0.01,
+        },
+        behaviors: [
+          "drag-canvas",
+          "zoom-canvas",
+          "drag-element",
+          { type: "hover-activate", degree: 0 },
+        ],
         });
         graph.on("node:click", (ev: unknown) => {
           const id = (ev as { target?: { id?: string } }).target?.id;
@@ -277,7 +318,7 @@ export function GraphClient({
             </div>
           ) : (
             <div className="relative overflow-hidden rounded-[18px] bg-surface ring-1 ring-line">
-              <div ref={containerRef} className="h-[520px] w-full" />
+              <div ref={containerRef} className="h-[640px] w-full" />
               <div className="absolute top-3 left-3 flex gap-2 rounded-full bg-white/85 px-3 py-1.5 text-[11px] font-semibold ring-1 ring-line">
                 {(["concept", "process", "example"] as const).map((t) => (
                   <span key={t} className="flex items-center gap-1">
@@ -285,6 +326,9 @@ export function GraphClient({
                     {TYPE_LABEL[t]}
                   </span>
                 ))}
+              </div>
+              <div className="absolute right-3 bottom-3 rounded-full bg-white/85 px-3 py-1.5 text-[10.5px] text-ink-3 ring-1 ring-line">
+                悬停连线看关系 · 滚轮缩放 · 拖拽平移
               </div>
             </div>
           )}
@@ -325,7 +369,7 @@ export function GraphClient({
             </p>
           ) : (
             <div className="overflow-hidden rounded-[18px] bg-surface ring-1 ring-line">
-              <div ref={markmapRef} className={cn("h-[520px] w-full")} />
+              <div ref={markmapRef} className={cn("h-[640px] w-full")} />
             </div>
           )}
         </TabsContent>
