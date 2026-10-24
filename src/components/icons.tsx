@@ -8,6 +8,7 @@
 export {
   ArrowLeft,
   ArrowsClockwise,
+  BookOpen,
   Cards,
   ChartBar,
   ChatCircleText,

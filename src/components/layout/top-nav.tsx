@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   Flame,
   GearSix,
@@ -19,6 +19,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { UploadDialog, type CourseOption } from "@/components/courses/upload-dialog";
 
 const NAV_ITEMS = [
   { href: "/", label: "概览" },
@@ -34,8 +35,15 @@ const NAV_ITEMS = [
 
 export function TopNav({ streak = 0 }: { streak?: number }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [courses, setCourses] = useState<CourseOption[]>([]);
+
+  useEffect(() => {
+    fetch("/api/courses")
+      .then((r) => r.json())
+      .then((d) => setCourses(d.courses ?? []))
+      .catch(() => {});
+  }, [pathname]);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -75,14 +83,15 @@ export function TopNav({ streak = 0 }: { streak?: number }) {
             <Flame size={14} weight="fill" />
             连续 <span className="num">{streak}</span> 天
           </span>
-          <Button
-            size="lg"
-            onClick={() => router.push("/courses")}
-            className="hidden sm:inline-flex"
-          >
-            <Plus data-icon="inline-start" size={14} weight="bold" />
-            上传资料
-          </Button>
+          <UploadDialog
+            courses={courses}
+            trigger={
+              <Button size="lg" className="hidden sm:inline-flex">
+                <Plus data-icon="inline-start" size={14} weight="bold" />
+                上传资料
+              </Button>
+            }
+          />
           <Button
             variant="ghost"
             size="icon"
