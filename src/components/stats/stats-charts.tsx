@@ -102,9 +102,9 @@ export function StatsCharts({ data }: { data: StatsOverview }) {
         />
         <Chart
           option={{
-            title: { text: "知识点掌握度 Top 15", left: 8, textStyle: { fontSize: 14 } },
+            title: { text: "知识点掌握度 Top 15", left: 8, top: 0, textStyle: { fontSize: 14 } },
             tooltip: { trigger: "axis" },
-            grid: { left: 160, right: 30, top: 20, bottom: 30 },
+            grid: { left: 170, right: 40, top: 46, bottom: 30 },
             xAxis: { type: "value", min: 0, max: 100 },
             yAxis: {
               type: "category",
