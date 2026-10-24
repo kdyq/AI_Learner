@@ -137,6 +137,105 @@ export function GraphClient({
     }
   };
 
+  /**
+   * 自研力导布局：随机初始（进入即分散）+ 全对斥力 + 边弹簧 + 弱向心 + 重叠消除。
+   * 节点量级（<100）下 O(n²) 迭代毫秒级完成，且完全确定、不依赖 G6 内置布局的可变状态。
+   */
+  function computeLayout(
+    nodeList: { id: string }[],
+    edgeList: { sourceId: string; targetId: string }[],
+    width: number,
+    height: number
+  ): Map<string, { x: number; y: number }> {
+    const N = nodeList.length;
+    const px = new Float64Array(N);
+    const py = new Float64Array(N);
+    const vx = new Float64Array(N);
+    const vy = new Float64Array(N);
+    const idx = new Map(nodeList.map((n, i) => [n.id, i] as const));
+
+    for (let i = 0; i < N; i++) {
+      px[i] = 60 + Math.random() * (width - 120);
+      py[i] = 60 + Math.random() * (height - 120);
+    }
+
+    const REPULSE_R = 170; // 斥力作用半径
+    const SPRING_LEN = 150; // 边理想长度
+    const MIN_GAP = 34; // 最终最小中心距
+
+    for (let iter = 0; iter < 320; iter++) {
+      const cooling = 1 - iter / 320;
+      for (let i = 0; i < N; i++) {
+        for (let j = i + 1; j < N; j++) {
+          const dx = px[j] - px[i];
+          const dy = py[j] - py[i];
+          const dist = Math.hypot(dx, dy) || 0.01;
+          if (dist < REPULSE_R) {
+            const f = ((REPULSE_R - dist) / REPULSE_R) * 3.2;
+            const ux = dx / dist;
+            const uy = dy / dist;
+            vx[i] -= ux * f;
+            vy[i] -= uy * f;
+            vx[j] += ux * f;
+            vy[j] += uy * f;
+          }
+        }
+      }
+      for (const e of edgeList) {
+        const i = idx.get(e.sourceId);
+        const j = idx.get(e.targetId);
+        if (i === undefined || j === undefined) continue;
+        const dx = px[j] - px[i];
+        const dy = py[j] - py[i];
+        const dist = Math.hypot(dx, dy) || 0.01;
+        const f = (dist - SPRING_LEN) * 0.015;
+        const ux = dx / dist;
+        const uy = dy / dist;
+        vx[i] += ux * f;
+        vy[i] += uy * f;
+        vx[j] -= ux * f;
+        vy[j] -= uy * f;
+      }
+      const cx = width / 2;
+      const cy = height / 2;
+      for (let i = 0; i < N; i++) {
+        vx[i] += (cx - px[i]) * 0.002;
+        vy[i] += (cy - py[i]) * 0.002;
+        vx[i] = Math.max(-14, Math.min(14, vx[i])) * cooling;
+        vy[i] = Math.max(-14, Math.min(14, vy[i])) * cooling;
+        px[i] += vx[i];
+        py[i] += vy[i];
+        px[i] = Math.max(30, Math.min(width - 30, px[i]));
+        py[i] = Math.max(30, Math.min(height - 30, py[i]));
+      }
+    }
+
+    for (let iter = 0; iter < 120; iter++) {
+      let moved = false;
+      for (let i = 0; i < N; i++) {
+        for (let j = i + 1; j < N; j++) {
+          const dx = px[j] - px[i];
+          const dy = py[j] - py[i];
+          const dist = Math.hypot(dx, dy) || 0.01;
+          if (dist >= MIN_GAP) continue;
+          const push = (MIN_GAP - dist) / 2;
+          const ux = dx / dist;
+          const uy = dy / dist;
+          px[i] -= ux * push;
+          py[i] -= uy * push;
+          px[j] += ux * push;
+          py[j] += uy * push;
+          moved = true;
+        }
+      }
+      if (!moved) break;
+    }
+
+    const out = new Map<string, { x: number; y: number }>();
+    nodeList.forEach((n, i) => out.set(n.id, { x: Math.round(px[i]), y: Math.round(py[i]) }));
+    return out;
+  }
+
   // G6 渲染
   useEffect(() => {
     if (nodes.length === 0 || !containerRef.current) return;
@@ -147,6 +246,8 @@ export function GraphClient({
         const { Graph } = await import("@antv/g6");
         if (cancelled || !containerRef.current) return;
         const el = containerRef.current;
+        // 先本地算好布局（随机初始=进入即分散，重叠已消除），G6 只负责渲染与交互
+        const positions = computeLayout(nodes, edges, el.clientWidth, 640);
         graph = new Graph({
         container: el,
         width: el.clientWidth,
@@ -154,23 +255,30 @@ export function GraphClient({
         autoFit: "view",
         padding: 30,
         data: {
-          nodes: nodes.map((n) => ({ id: n.id, data: { label: n.name, type: n.type } })),
+          nodes: nodes.map((n) => {
+            const p = positions.get(n.id)!;
+            return {
+              id: n.id,
+              data: { label: n.name, type: n.type },
+              style: { x: p.x, y: p.y },
+            };
+          }),
           edges: edges.map((e) => ({ id: e.id, source: e.sourceId, target: e.targetId, data: { label: e.relation } })),
         },
         node: {
           style: {
-            size: (d: NodeData) => ((d.data as { type?: string })?.type === "concept" ? 22 : 15),
+            size: (d: NodeData) => ((d.data as { type?: string })?.type === "concept" ? 16 : 11),
             fill: (d: NodeData) =>
               TYPE_COLOR[((d.data as { type?: string })?.type as GNode["type"]) ?? "concept"] ?? "#5D6170",
-            lineWidth: 1.5,
-            lineFallWidth: 3,
+            lineWidth: 1.2,
+            lineFallWidth: 2.5,
             labelText: (d: NodeData) => String((d.data as { label?: string })?.label ?? ""),
             labelFill: "#3A3D49",
-            labelFontSize: 10,
+            labelFontSize: 9,
             labelPlacement: "bottom" as const,
             labelOffsetY: 2,
             labelWordWrap: true,
-            labelMaxLength: 12,
+            labelMaxLength: 10,
             labelBackground: true,
             labelBackgroundFill: "rgba(255,255,255,.92)",
             labelBackgroundRadius: 4,
@@ -178,7 +286,7 @@ export function GraphClient({
             labelPadding: [1, 3],
           },
           state: {
-            active: { halo: true, haloStroke: "#9A9EAD", labelFontSize: 11 },
+            active: { halo: true, haloStroke: "#9A9EAD", labelFontSize: 10.5 },
           },
         },
         edge: {
@@ -208,17 +316,6 @@ export function GraphClient({
             },
           },
         },
-        layout: {
-          type: "force",
-          linkDistance: 150,
-          nodeStrength: -160,
-          edgeStrength: 50,
-          gravity: 5,
-          preventOverlap: true,
-          nodeSize: 34,
-          alphaDecay: 0.028,
-          alphaMin: 0.01,
-        },
         behaviors: [
           "drag-canvas",
           "zoom-canvas",
@@ -232,6 +329,15 @@ export function GraphClient({
           if (n) setSelected(n);
         });
         await graph.render();
+        // StrictMode 双挂载竞态兜底：render 完成时本 effect 已被清理则自毁，避免残留重影画布
+        if (cancelled) {
+          try {
+            graph.destroy();
+          } catch {
+            // 已销毁
+          }
+          return;
+        }
       } catch (err) {
         console.error("[G6]", err);
         toast.error(`图谱渲染失败：${(err as Error).message?.slice(0, 120)}`);
@@ -239,7 +345,13 @@ export function GraphClient({
     })();
     return () => {
       cancelled = true;
-      graph?.destroy();
+      try {
+        graph?.destroy();
+      } catch {
+        // 已销毁
+      }
+      // StrictMode 双挂载下 destroy 异步，强制清掉残留画布避免重影
+      if (containerRef.current) containerRef.current.innerHTML = "";
     };
   }, [nodes, edges]);
 
