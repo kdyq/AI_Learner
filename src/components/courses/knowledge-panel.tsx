@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Lightning, Sparkle, SpinnerGap } from "@phosphor-icons/react";
+import { Cards, Lightning, Sparkle, SpinnerGap } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +26,26 @@ export function KnowledgePanel({
 }) {
   const router = useRouter();
   const [extracting, setExtracting] = useState(false);
+  const [carding, setCarding] = useState(false);
+
+  const makeCards = async () => {
+    if (points.length === 0) return;
+    setCarding(true);
+    try {
+      const res = await fetch("/api/flashcards/from-knowledge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ knowledgePointIds: points.map((p) => p.id) }),
+      });
+      const d = (await res.json()) as { created?: number; error?: string };
+      if (!res.ok) throw new Error(d.error ?? "转换失败");
+      toast.success(`新增 ${d.created ?? 0} 张闪卡（已跳过转过的），去「复习」页开始`);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setCarding(false);
+    }
+  };
 
   const extract = async () => {
     setExtracting(true);
@@ -55,10 +75,13 @@ export function KnowledgePanel({
         <span className="text-[12.5px] text-ink-3">
           共 <b className="num text-ink">{points.length}</b> 个 · 核心 <b className="num text-peach-ink">{coreCount}</b>
         </span>
+        <Button variant="outline" size="sm" onClick={makeCards} disabled={carding || points.length === 0}>
+          {carding ? <SpinnerGap className="animate-spin" size={14} /> : <Cards size={14} />}
+          一键转闪卡
+        </Button>
         <Button
           variant="outline"
           size="sm"
-          className="ml-auto"
           onClick={extract}
           disabled={extracting}
         >

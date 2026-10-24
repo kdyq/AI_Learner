@@ -1,5 +1,7 @@
-import { ModulePlaceholder } from "@/components/layout/module-placeholder";
+import { ReviewClient } from "@/components/review/review-client";
+
+export const dynamic = "force-dynamic";
 
 export default function ReviewPage() {
-  return <ModulePlaceholder title="复习" milestone="M5（复习体系）" />;
+  return <ReviewClient />;
 }

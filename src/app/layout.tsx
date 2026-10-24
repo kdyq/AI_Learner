@@ -3,6 +3,9 @@ import "./globals.css";
 import { TopNav } from "@/components/layout/top-nav";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { calcStreak } from "@/lib/stats";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: {
@@ -17,7 +20,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="zh-CN" className="h-full antialiased">
       <body className="flex min-h-full flex-col">
         <TooltipProvider>
-          <TopNav />
+          <TopNav streak={calcStreak()} />
           <main className="mx-auto w-full max-w-[1220px] flex-1 px-4 py-6 sm:px-[30px]">
             {children}
           </main>
