@@ -63,6 +63,7 @@ export function ChatClient({
   const [streaming, setStreaming] = useState(false);
   const [streamText, setStreamText] = useState("");
   const [newCourse, setNewCourse] = useState(courses[0]?.id ?? "none");
+  const [generating, setGenerating] = useState(false);
   const [drawerCitation, setDrawerCitation] = useState<Citation | null>(null);
   const [drawerChunk, setDrawerChunk] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -127,7 +128,30 @@ export function ChatClient({
     const content = input.trim();
     if (!content || streaming) return;
     if (content.startsWith("/出题")) {
-      toast.info("「/出题」将在 M4 题库模块可用，当前版本请直接提问");
+      // 快捷指令：/出题 [题量] → 用当前会话课程生成混合题组
+      const session0 = sessions.find((s) => s.id === activeId);
+      const cid = session0?.courseId ?? (newCourse !== "none" ? newCourse : null);
+      if (!cid) {
+        toast.error("请先选择课程再使用 /出题");
+        return;
+      }
+      const count = Math.min(10, Math.max(1, Number(content.replace("/出题", "").trim()) || 5));
+      setGenerating(true);
+      try {
+        const res = await fetch("/api/quiz/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ courseId: cid, scope: "course", types: ["single", "multiple", "fill", "judge", "short"], count, difficulty: 3 }),
+        });
+        const d = (await res.json()) as { quizSetId?: string; created?: number; error?: string };
+        if (!res.ok) throw new Error(d.error ?? "生成失败");
+        toast.success(`已生成 ${d.created} 道混合题，跳转作答`);
+        window.location.href = `/quiz/${d.quizSetId}`;
+      } catch (err) {
+        toast.error((err as Error).message);
+      } finally {
+        setGenerating(false);
+      }
       return;
     }
     let sessionId = activeId;
@@ -374,8 +398,8 @@ export function ChatClient({
               placeholder="向资料提问…（/出题 生成练习题 · Enter 发送）"
               className="max-h-32 min-h-[44px] flex-1 resize-none bg-transparent px-2 py-1.5 text-[13.5px] outline-none placeholder:text-ink-3"
             />
-            <Button onClick={() => void send()} disabled={streaming || !input.trim()} size="icon" aria-label="发送">
-              {streaming ? <SpinnerGap className="animate-spin" size={15} /> : <PaperPlaneTilt size={15} weight="fill" />}
+            <Button onClick={() => void send()} disabled={streaming || generating || !input.trim()} size="icon" aria-label="发送">
+              {streaming || generating ? <SpinnerGap className="animate-spin" size={15} /> : <PaperPlaneTilt size={15} weight="fill" />}
             </Button>
           </div>
         </div>
